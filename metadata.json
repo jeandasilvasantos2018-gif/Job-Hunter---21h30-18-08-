@@ -1,0 +1,6 @@
+{
+  "name": "Job Hunter AI",
+  "description": "Plataforma avançada de busca, análise e priorização de vagas com suporte a Adzuna, Greenhouse, Remotar e Vagas Remotas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
