@@ -1,9 +1,21 @@
-import { Job, SeniorityLevel, WorkplaceType, JobWithAnalysis, UserProfile } from '../types';
+import {
+  Job,
+  SeniorityLevel,
+  WorkplaceType,
+  JobWithAnalysis,
+  UserProfile,
+  GupySearchDiagnostics,
+  SolidesSearchDiagnostics,
+  PandapeSearchDiagnostics,
+} from '../types';
 import { calculateJobScore } from './scoring';
 import { deduplicateJobs } from '../utils/deduplication';
 import { classifyGeo } from './geoClassifier';
 import { getStoredJobBoards } from '../data/jobBoards';
 import { fetchAllGreenhouseJobs } from './greenhouse';
+import { fetchGupyJobs } from './gupy';
+import { fetchSolidesJobs } from './solides';
+import { fetchPandapeJobs } from './pandape';
 import { syncJobToSupabase } from './cloudSync';
 import { applySearchLocationFilter, LocationFilterMetrics } from './locationFilter';
 
@@ -15,7 +27,7 @@ export interface SearchOptions {
   searchAllTargets?: boolean;
   minScoreFilter?: number; // e.g. 0, 65, 75, 85, 90
   includeUncertainIntl?: boolean;
-  sourceFilter?: 'all' | 'adzuna' | 'greenhouse' | 'remotar' | 'vagasremotas';
+  sourceFilter?: 'all' | 'adzuna' | 'greenhouse' | 'gupy' | 'solides' | 'pandape' | 'remotar' | 'vagasremotas';
 }
 
 export interface AdzunaRawItem {
@@ -67,6 +79,9 @@ export interface DiagnosticsDetails {
     brazilCompatible: number;
     error?: string | null;
   };
+  gupy?: GupySearchDiagnostics;
+  solides?: SolidesSearchDiagnostics;
+  pandape?: PandapeSearchDiagnostics;
   remotar?: {
     jobsReceived: number;
     normalized: number;
@@ -640,7 +655,105 @@ export async function searchRealJobs(
     return matchesTarget;
   });
 
-  // 3. Fetch Remotar Jobs (remotar.com.br) if sourceFilter is 'all' or 'remotar'
+  // 3. Fetch Gupy Jobs (portal.gupy.io) if sourceFilter is 'all' or 'gupy'
+  let gupyJobs: Job[] = [];
+  let gupyDiagnostics: GupySearchDiagnostics = {
+    status: 'ACTIVE',
+    publicDiscovery: 'AVAILABLE',
+    blockedCount: 0,
+    duplicatesRemoved: 0,
+    finalGupyResults: 0,
+    durationMs: 0,
+    cacheStatus: 'LIVE',
+    adapterVersion: 'GUPY-BRAZIL-V1',
+    expansionStage: 'BRAZIL-SOURCES-V1',
+    error: null,
+  };
+  let gupyError: string | null = null;
+  if (sourceFilter === 'all' || sourceFilter === 'gupy') {
+    try {
+      const queryToUse = options.query || (userProfile.targetTitles?.[0] || '');
+      const gupyRes = await fetchGupyJobs({ query: queryToUse, location, daysOld });
+      gupyDiagnostics = gupyRes.diagnostics;
+      if (gupyRes.ok) {
+        gupyJobs = gupyRes.jobs;
+      } else {
+        gupyError = gupyRes.error || null;
+      }
+    } catch (err: any) {
+      gupyError = err.message || 'Erro ao conectar com Gupy';
+      gupyDiagnostics.status = 'ERROR';
+      gupyDiagnostics.error = gupyError;
+    }
+  }
+
+  // 4. Fetch Sólides Jobs (vagas.solides.com.br) if sourceFilter is 'all' or 'solides'
+  let solidesJobs: Job[] = [];
+  let solidesDiagnostics: SolidesSearchDiagnostics = {
+    status: 'ACTIVE',
+    publicDiscovery: 'AVAILABLE',
+    blockedCount: 0,
+    duplicatesRemoved: 0,
+    finalSolidesResults: 0,
+    durationMs: 0,
+    cacheStatus: 'LIVE',
+    adapterVersion: 'SOLIDES-BRAZIL-V1',
+    expansionStage: 'BRAZIL-SOURCES-V1',
+    error: null,
+  };
+  let solidesError: string | null = null;
+  if (sourceFilter === 'all' || sourceFilter === 'solides') {
+    try {
+      const queryToUse = options.query || (userProfile.targetTitles?.[0] || '');
+      const solidesRes = await fetchSolidesJobs({ query: queryToUse, location, daysOld });
+      solidesDiagnostics = solidesRes.diagnostics;
+      if (solidesRes.ok) {
+        solidesJobs = solidesRes.jobs;
+      } else {
+        solidesError = solidesRes.error || null;
+      }
+    } catch (err: any) {
+      solidesError = err.message || 'Erro ao conectar com Sólides';
+      solidesDiagnostics.status = 'ERROR';
+      solidesDiagnostics.error = solidesError;
+    }
+  }
+
+  // 5. Fetch Pandapé Jobs (pandape.infojobs.com.br) if sourceFilter is 'all' or 'pandape'
+  let pandapeJobs: Job[] = [];
+  let pandapeDiagnostics: PandapeSearchDiagnostics = {
+    status: 'ACTIVE',
+    publicDiscovery: 'AVAILABLE',
+    blockedCount: 0,
+    duplicatesRemoved: 0,
+    finalPandapeResults: 0,
+    tenantsChecked: 1,
+    tenantsSuccessful: 1,
+    durationMs: 0,
+    cacheStatus: 'LIVE',
+    adapterVersion: 'PANDAPE-BRAZIL-V1',
+    expansionStage: 'BRAZIL-SOURCES-V1',
+    error: null,
+  };
+  let pandapeError: string | null = null;
+  if (sourceFilter === 'all' || sourceFilter === 'pandape') {
+    try {
+      const queryToUse = options.query || (userProfile.targetTitles?.[0] || '');
+      const pandapeRes = await fetchPandapeJobs({ query: queryToUse, location, daysOld });
+      pandapeDiagnostics = pandapeRes.diagnostics;
+      if (pandapeRes.ok) {
+        pandapeJobs = pandapeRes.jobs;
+      } else {
+        pandapeError = pandapeRes.error || null;
+      }
+    } catch (err: any) {
+      pandapeError = err.message || 'Erro ao conectar com Pandapé';
+      pandapeDiagnostics.status = 'ERROR';
+      pandapeDiagnostics.error = pandapeError;
+    }
+  }
+
+  // 6. Fetch Remotar Jobs (remotar.com.br) if sourceFilter is 'all' or 'remotar'
   let remotarJobs: Job[] = [];
   let remotarError: string | null = null;
   if (sourceFilter === 'all' || sourceFilter === 'remotar') {
@@ -657,7 +770,7 @@ export async function searchRealJobs(
     }
   }
 
-  // 4. Fetch Vagas Remotas Jobs (vagasremotas.com.br / GitHub BR) if sourceFilter is 'all' or 'vagasremotas'
+  // 7. Fetch Vagas Remotas Jobs (vagasremotas.com.br / GitHub BR) if sourceFilter is 'all' or 'vagasremotas'
   let vagasRemotasJobs: Job[] = [];
   let vrReposChecked = 0;
   let vrReposSuccessful = 0;
@@ -678,10 +791,13 @@ export async function searchRealJobs(
     }
   }
 
-  // 5. Combine normalized jobs from all active sources
+  // 8. Combine normalized jobs from all active sources (Adzuna + Greenhouse + Gupy + Sólides + Pandapé + Remotar + Vagas Remotas)
   const combinedAllJobs: Job[] = [
     ...normalizedAdzunaJobs,
     ...relevantGhJobs,
+    ...gupyJobs,
+    ...solidesJobs,
+    ...pandapeJobs,
     ...remotarJobs,
     ...vagasRemotasJobs,
   ];
@@ -777,6 +893,9 @@ export async function searchRealJobs(
       brazilCompatible: ghBrazilCompatible,
       error: ghError,
     },
+    gupy: gupyDiagnostics,
+    solides: solidesDiagnostics,
+    pandape: pandapeDiagnostics,
     remotar: {
       jobsReceived: remotarJobs.length,
       normalized: remotarJobs.length,
@@ -798,6 +917,42 @@ export async function searchRealJobs(
       latencyMs,
     },
   };
+
+  // If Gupy failed and user strictly requested Gupy only, return error
+  if (sourceFilter === 'gupy' && gupyJobs.length === 0 && gupyError) {
+    return {
+      ok: false,
+      jobs: [],
+      error: gupyError,
+      errorCode: 'GUPY_ERROR',
+      errorStage: 'BACKEND_PROXY',
+      diagnostics,
+    };
+  }
+
+  // If Solides failed and user strictly requested Solides only, return error
+  if (sourceFilter === 'solides' && solidesJobs.length === 0 && solidesError) {
+    return {
+      ok: false,
+      jobs: [],
+      error: solidesError,
+      errorCode: 'SOLIDES_ERROR',
+      errorStage: 'BACKEND_PROXY',
+      diagnostics,
+    };
+  }
+
+  // If Pandape failed and user strictly requested Pandape only, return error
+  if (sourceFilter === 'pandape' && pandapeJobs.length === 0 && pandapeError) {
+    return {
+      ok: false,
+      jobs: [],
+      error: pandapeError,
+      errorCode: 'PANDAPE_ERROR',
+      errorStage: 'BACKEND_PROXY',
+      diagnostics,
+    };
+  }
 
   // If Adzuna failed and user strictly requested Adzuna only, return error
   if (sourceFilter === 'adzuna' && !backendData?.ok && adzunaApiError) {

@@ -63,9 +63,10 @@ export interface Job {
   url: string;
   publishedAt: string;
   salaryRange?: string;
-  source?: 'mock' | 'adzuna' | 'greenhouse' | string;
+  source?: 'mock' | 'adzuna' | 'greenhouse' | 'gupy' | 'solides' | 'pandape' | 'remotar' | 'vagasremotas' | string;
   sources?: string[];
   discovery_source?: string;
+  companyLogo?: string;
   roleFamily?: string;
   language?: string;
   geoCategory?: GeoCategory;
@@ -73,6 +74,100 @@ export interface Job {
   resumeLanguageOverride?: 'auto' | 'pt-BR' | 'en';
   isUnresolved?: boolean;
   unresolvedReason?: string;
+}
+
+export interface GupySearchDiagnostics {
+  status: 'ACTIVE' | 'ERROR' | 'EMPTY';
+  publicDiscovery: 'AVAILABLE' | 'UNAVAILABLE';
+  blockedCount: number;
+  duplicatesRemoved: number;
+  finalGupyResults: number;
+  durationMs: number;
+  cacheStatus: 'LIVE' | 'CACHED';
+  adapterVersion: 'GUPY-BRAZIL-V1';
+  expansionStage: 'BRAZIL-SOURCES-V1';
+  error?: string | null;
+}
+
+export interface GupyRawJob {
+  id: string | number;
+  name: string;
+  careerPageName?: string;
+  description?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  isRemoteWork?: boolean;
+  workplaceType?: string;
+  type?: string;
+  skills?: string[];
+  jobUrl?: string;
+  careerPageUrl?: string;
+  careerPageLogo?: string;
+  publishedAt?: string;
+  createdAt?: string;
+}
+
+export interface SolidesSearchDiagnostics {
+  status: 'ACTIVE' | 'ERROR' | 'EMPTY';
+  publicDiscovery: 'AVAILABLE' | 'UNAVAILABLE';
+  blockedCount: number;
+  duplicatesRemoved: number;
+  finalSolidesResults: number;
+  durationMs: number;
+  cacheStatus: 'LIVE' | 'CACHED';
+  adapterVersion: 'SOLIDES-BRAZIL-V1';
+  expansionStage: 'BRAZIL-SOURCES-V1';
+  error?: string | null;
+}
+
+export interface SolidesRawJob {
+  id: string | number;
+  title?: string;
+  name?: string;
+  company?: string;
+  company_name?: string;
+  description?: string;
+  city?: string;
+  state?: string;
+  pcd?: boolean;
+  salary?: string | number;
+  type?: string;
+  workplace_type?: string;
+  is_remote?: boolean;
+  link?: string;
+  url?: string;
+  created_at?: string;
+}
+
+export interface PandapeSearchDiagnostics {
+  status: 'ACTIVE' | 'ERROR' | 'EMPTY';
+  publicDiscovery: 'AVAILABLE' | 'UNAVAILABLE';
+  blockedCount: number;
+  duplicatesRemoved: number;
+  finalPandapeResults: number;
+  tenantsChecked: number;
+  tenantsSuccessful: number;
+  durationMs: number;
+  cacheStatus: 'LIVE' | 'CACHED';
+  adapterVersion: 'PANDAPE-BRAZIL-V1';
+  expansionStage: 'BRAZIL-SOURCES-V1';
+  error?: string | null;
+}
+
+export interface PandapeRawJob {
+  id: string | number;
+  title: string;
+  companyName?: string;
+  description?: string;
+  city?: string;
+  state?: string;
+  contractType?: string;
+  salary?: string;
+  url?: string;
+  publishedDate?: string;
+  isRemote?: boolean;
+  tenantKey?: string;
 }
 
 export interface ScoreBreakdown {

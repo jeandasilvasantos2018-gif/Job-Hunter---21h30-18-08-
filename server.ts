@@ -416,6 +416,306 @@ async function startServer() {
   app.get('/api/remotar/search', handleRemotarSearch);
 
   // ==========================================
+  // GUPY SEARCH PROXY (portal.gupy.io)
+  // ==========================================
+  async function queryGupy(params: { query?: string; location?: string; limit?: number; daysOld?: number }) {
+    const query = (params.query || '').trim();
+    const location = (params.location || '').trim();
+    const limit = Number(params.limit || 50);
+
+    const gupyUrl = `https://portal.gupy.io/api/v1/jobs?jobName=${encodeURIComponent(query)}&limit=${limit}&offset=0`;
+
+    try {
+      const response = await fetch(gupyUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          source: 'gupy',
+          runtimeBackend: 'GUPY-BACKEND-V1',
+          httpStatus: response.status,
+          error: `Erro ao consultar Gupy (HTTP ${response.status})`,
+          results: [],
+        };
+      }
+
+      const data: any = await response.json();
+      const rawItems = Array.isArray(data?.data) ? data.data : (Array.isArray(data?.results) ? data.results : []);
+
+      const results = rawItems.map((item: any) => ({
+        id: item.id,
+        name: item.name || item.title || 'Vaga Sem Título',
+        careerPageName: item.careerPageName || item.companyName || 'Empresa na Gupy',
+        description: item.description || '',
+        city: item.city,
+        state: item.state,
+        country: item.country || 'Brasil',
+        isRemoteWork: Boolean(item.isRemoteWork || item.workplaceType === 'remote'),
+        workplaceType: item.workplaceType || (item.isRemoteWork ? 'remote' : 'on-site'),
+        type: item.type,
+        skills: item.skills || [],
+        jobUrl: item.jobUrl || item.careerPageUrl || `https://portal.gupy.io/job-search/term=${encodeURIComponent(item.name || query)}`,
+        careerPageUrl: item.careerPageUrl,
+        careerPageLogo: item.careerPageLogo,
+        publishedAt: item.publishedDate || item.createdAt || new Date().toISOString(),
+      }));
+
+      return {
+        ok: true,
+        source: 'gupy',
+        runtimeBackend: 'GUPY-BACKEND-V1',
+        total: data?.total || results.length,
+        results,
+      };
+    } catch (err: any) {
+      console.warn('Erro ao conectar com Gupy API:', err.message);
+      return {
+        ok: false,
+        source: 'gupy',
+        runtimeBackend: 'GUPY-BACKEND-V1',
+        error: err.message || 'Exceção de rede ao conectar com Gupy',
+        results: [],
+      };
+    }
+  }
+
+  const handleGupySearch = async (req: express.Request, res: express.Response) => {
+    try {
+      const query = (req.body?.query ?? req.query?.query ?? req.body?.jobName ?? req.query?.jobName) as string | undefined;
+      const location = (req.body?.location ?? req.query?.location) as string | undefined;
+      const limit = Number(req.body?.limit ?? req.query?.limit ?? 50);
+      const daysOld = Number(req.body?.daysOld ?? req.query?.daysOld ?? 30);
+
+      const result = await queryGupy({ query, location, limit, daysOld });
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        source: 'gupy',
+        runtimeBackend: 'GUPY-BACKEND-V1',
+        error: err.message || 'Erro interno ao processar Gupy',
+        results: [],
+      });
+    }
+  };
+
+  app.post('/api/gupy/search', handleGupySearch);
+  app.get('/api/gupy/search', handleGupySearch);
+
+  // ==========================================
+  // SÓLIDES SEARCH PROXY (vagas.solides.com.br)
+  // ==========================================
+  async function querySolides(params: { query?: string; location?: string; limit?: number; daysOld?: number }) {
+    const query = (params.query || '').trim();
+    const limit = Number(params.limit || 50);
+
+    const solidesUrl = `https://vagas.solides.com.br/api/vacancies?search=${encodeURIComponent(query)}&take=${limit}&skip=0`;
+
+    try {
+      const response = await fetch(solidesUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          source: 'solides',
+          runtimeBackend: 'SOLIDES-BACKEND-V1',
+          httpStatus: response.status,
+          error: `Erro ao consultar Sólides (HTTP ${response.status})`,
+          results: [],
+        };
+      }
+
+      const data: any = await response.json();
+      const rawItems = Array.isArray(data?.data) ? data.data : (Array.isArray(data?.vacancies) ? data.vacancies : (Array.isArray(data) ? data : []));
+
+      const results = rawItems.map((item: any) => ({
+        id: item.id || item.vacancyId || Math.random().toString(36).substring(7),
+        title: item.title || item.name || 'Vaga Sólides',
+        company: item.company || item.company_name || item.enterprise || 'Empresa via Sólides',
+        description: item.description || item.summary || '',
+        city: item.city || item.addressCity,
+        state: item.state || item.addressState,
+        pcd: Boolean(item.pcd || item.isPcd),
+        salary: item.salary || item.salaryRange,
+        type: item.type || item.seniority,
+        workplace_type: item.workplace_type || (item.is_remote || item.remote ? 'remote' : 'presential'),
+        is_remote: Boolean(item.is_remote || item.remote || item.workplace_type === 'remote'),
+        url: item.link || item.url || (item.id ? `https://vagas.solides.com.br/vaga/${item.id}` : 'https://vagas.solides.com.br'),
+        created_at: item.created_at || item.createdAt || new Date().toISOString(),
+      }));
+
+      return {
+        ok: true,
+        source: 'solides',
+        runtimeBackend: 'SOLIDES-BACKEND-V1',
+        total: results.length,
+        results,
+      };
+    } catch (err: any) {
+      console.warn('Erro ao conectar com Sólides API:', err.message);
+      return {
+        ok: false,
+        source: 'solides',
+        runtimeBackend: 'SOLIDES-BACKEND-V1',
+        error: err.message || 'Exceção de rede ao conectar com Sólides',
+        results: [],
+      };
+    }
+  }
+
+  const handleSolidesSearch = async (req: express.Request, res: express.Response) => {
+    try {
+      const query = (req.body?.query ?? req.query?.query ?? req.body?.title ?? req.query?.title) as string | undefined;
+      const location = (req.body?.location ?? req.query?.location) as string | undefined;
+      const limit = Number(req.body?.limit ?? req.query?.limit ?? 50);
+      const daysOld = Number(req.body?.daysOld ?? req.query?.daysOld ?? 30);
+
+      const result = await querySolides({ query, location, limit, daysOld });
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        source: 'solides',
+        runtimeBackend: 'SOLIDES-BACKEND-V1',
+        error: err.message || 'Erro interno ao processar Sólides',
+        results: [],
+      });
+    }
+  };
+
+  app.post('/api/solides/search', handleSolidesSearch);
+  app.get('/api/solides/search', handleSolidesSearch);
+
+  // ==========================================
+  // PANDAPÉ SEARCH PROXY (pandape.infojobs.com.br)
+  // ==========================================
+  async function queryPandape(params: { query?: string; location?: string; limit?: number; daysOld?: number }) {
+    const query = (params.query || '').trim();
+    const limit = Number(params.limit || 50);
+
+    const pandapeUrl = `https://pandape.infojobs.com.br/api/jobs/search?q=${encodeURIComponent(query)}&limit=${limit}`;
+
+    try {
+      const response = await fetch(pandapeUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          source: 'pandape',
+          runtimeBackend: 'PANDAPE-BACKEND-V1',
+          httpStatus: response.status,
+          error: `Erro ao consultar Pandapé (HTTP ${response.status})`,
+          results: [],
+        };
+      }
+
+      const data: any = await response.json();
+      const rawItems = Array.isArray(data?.results) ? data.results : (Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []));
+
+      const results = rawItems.map((item: any) => ({
+        id: item.id || item.jobId || Math.random().toString(36).substring(7),
+        title: item.title || item.name || 'Vaga Pandapé',
+        companyName: item.companyName || item.company || 'Empresa via Pandapé',
+        description: item.description || '',
+        city: item.city,
+        state: item.state,
+        contractType: item.contractType,
+        salary: item.salary,
+        url: item.url || (item.id ? `https://pandape.infojobs.com.br/vaga/${item.id}` : 'https://pandape.infojobs.com.br'),
+        publishedDate: item.publishedDate || item.createdAt || new Date().toISOString(),
+        isRemote: Boolean(item.isRemote || item.workplaceType === 'remote'),
+      }));
+
+      return {
+        ok: true,
+        source: 'pandape',
+        runtimeBackend: 'PANDAPE-BACKEND-V1',
+        total: results.length,
+        results,
+      };
+    } catch (err: any) {
+      console.warn('Erro ao conectar com Pandapé API:', err.message);
+      return {
+        ok: false,
+        source: 'pandape',
+        runtimeBackend: 'PANDAPE-BACKEND-V1',
+        error: err.message || 'Exceção de rede ao conectar com Pandapé',
+        results: [],
+      };
+    }
+  }
+
+  const handlePandapeSearch = async (req: express.Request, res: express.Response) => {
+    try {
+      const query = (req.body?.query ?? req.query?.query) as string | undefined;
+      const location = (req.body?.location ?? req.query?.location) as string | undefined;
+      const limit = Number(req.body?.limit ?? req.query?.limit ?? 50);
+      const daysOld = Number(req.body?.daysOld ?? req.query?.daysOld ?? 30);
+
+      const result = await queryPandape({ query, location, limit, daysOld });
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        source: 'pandape',
+        runtimeBackend: 'PANDAPE-BACKEND-V1',
+        error: err.message || 'Erro interno ao processar Pandapé',
+        results: [],
+      });
+    }
+  };
+
+  app.post('/api/pandape/search', handlePandapeSearch);
+  app.get('/api/pandape/search', handlePandapeSearch);
+
+  // Pandapé Detail Endpoint
+  app.get('/api/pandape/detail', async (req, res) => {
+    try {
+      const tenantKey = (req.query?.tenantKey as string) || '';
+      const jobId = (req.query?.jobId as string) || '';
+      return res.json({
+        ok: true,
+        tenantKey,
+        jobId,
+        message: 'Pandapé Detail Endpoint ativo',
+      });
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // Diagnostic Test Endpoints for all platforms
+  app.get('/api/gupy/test', async (req, res) => {
+    const r = await queryGupy({ query: 'customer', limit: 5 });
+    return res.json({ testName: 'Gupy Diagnostic Test', result: r });
+  });
+
+  app.get('/api/solides/test', async (req, res) => {
+    const r = await querySolides({ query: 'customer', limit: 5 });
+    return res.json({ testName: 'Sólides Diagnostic Test', result: r });
+  });
+
+  app.get('/api/pandape/test', async (req, res) => {
+    const r = await queryPandape({ query: 'customer', limit: 5 });
+    return res.json({ testName: 'Pandapé Diagnostic Test', result: r });
+  });
+
+  // ==========================================
   // VAGAS REMOTAS SEARCH (vagasremotas.com.br / GitHub BR Remote Jobs)
   // ==========================================
   async function queryVagasRemotas(params: { query?: string; daysOld?: number; limit?: number }) {

@@ -80,7 +80,7 @@ export default function App() {
   const [searchDaysOld, setSearchDaysOld] = useState<number>(30);
   const [searchMinScore, setSearchMinScore] = useState<number>(0);
   const [searchAllTargets, setSearchAllTargets] = useState<boolean>(false);
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'adzuna' | 'greenhouse' | 'remotar' | 'vagasremotas'>('all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'adzuna' | 'greenhouse' | 'gupy' | 'solides' | 'pandape' | 'remotar' | 'vagasremotas'>('all');
   const [includeUncertainIntl, setIncludeUncertainIntl] = useState<boolean>(false);
 
   // Handlers for Favorite Geographic Locations
@@ -592,14 +592,17 @@ export default function App() {
                 <select
                   id="filter-source-select"
                   value={sourceFilter}
-                  onChange={(e) => setSourceFilter(e.target.value as 'all' | 'adzuna' | 'greenhouse' | 'remotar' | 'vagasremotas')}
+                  onChange={(e) => setSourceFilter(e.target.value as 'all' | 'adzuna' | 'greenhouse' | 'gupy' | 'solides' | 'pandape' | 'remotar' | 'vagasremotas')}
                   className="w-full bg-indigo-50/50 border border-indigo-200 focus:border-indigo-500 focus:bg-white rounded-md px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none transition font-bold cursor-pointer"
                 >
-                  <option value="all">Todas (Adzuna + Greenhouse + Remotar + Vagas Remotas)</option>
+                  <option value="all">Todas as Fontes (Adzuna + Greenhouse + Gupy + Sólides + Pandapé + Remotar + Vagas Remotas)</option>
                   <option value="adzuna">Somente Adzuna</option>
                   <option value="greenhouse">Somente Greenhouse (Direct ATS)</option>
+                  <option value="gupy">Somente Gupy (portal.gupy.io)</option>
+                  <option value="solides">Somente Sólides (vagas.solides.com.br)</option>
+                  <option value="pandape">Somente Pandapé (InfoJobs ATS)</option>
                   <option value="remotar">Somente Remotar (remotar.com.br)</option>
-                  <option value="vagasremotas">Somente Vagas Remotas (vagasremotas.com.br)</option>
+                  <option value="vagasremotas">Somente Vagas Remotas (vagasremotas.com.br / Repos BR)</option>
                 </select>
               </div>
 
@@ -982,7 +985,133 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Section 2b: REMOTAR (remotar.com.br) */}
+                {/* Section 2b: GUPY (portal.gupy.io) */}
+                {diagnostics.gupy && (
+                  <div className="bg-slate-900/90 border border-slate-800 rounded-md p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-violet-400 font-bold text-[11px] tracking-wide block uppercase">
+                        GUPY BRASIL (portal.gupy.io)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-violet-300 font-bold bg-violet-950/80 border border-violet-800 px-1.5 py-0.5 rounded font-mono">
+                          DISCOVERY: {diagnostics.gupy.publicDiscovery}
+                        </span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${diagnostics.gupy.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800'}`}>
+                          STATUS: {diagnostics.gupy.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-300">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">VAGAS RETORNADAS:</span>
+                        <strong className="text-emerald-400">{diagnostics.gupy.finalGupyResults}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">DUPLICADAS REMOVIDAS:</span>
+                        <strong className="text-white">{diagnostics.gupy.duplicatesRemoved}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">LATÊNCIA / CACHE:</span>
+                        <strong className="text-white">{diagnostics.gupy.durationMs} ms ({diagnostics.gupy.cacheStatus})</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">ADAPTER VERSION:</span>
+                        <strong className="text-violet-300 font-mono">{diagnostics.gupy.adapterVersion}</strong>
+                      </div>
+                    </div>
+                    {diagnostics.gupy.error && (
+                      <div className="text-[10px] text-rose-400 font-mono bg-rose-950/40 p-1.5 rounded border border-rose-900/50">
+                        Aviso: {diagnostics.gupy.error}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Section 2c: SÓLIDES (vagas.solides.com.br) */}
+                {diagnostics.solides && (
+                  <div className="bg-slate-900/90 border border-slate-800 rounded-md p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-orange-400 font-bold text-[11px] tracking-wide block uppercase">
+                        SÓLIDES TECNOLOGIA (vagas.solides.com.br)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-orange-300 font-bold bg-orange-950/80 border border-orange-800 px-1.5 py-0.5 rounded font-mono">
+                          DISCOVERY: {diagnostics.solides.publicDiscovery}
+                        </span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${diagnostics.solides.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800'}`}>
+                          STATUS: {diagnostics.solides.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-300">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">VAGAS RETORNADAS:</span>
+                        <strong className="text-emerald-400">{diagnostics.solides.finalSolidesResults}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">DUPLICADAS REMOVIDAS:</span>
+                        <strong className="text-white">{diagnostics.solides.duplicatesRemoved}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">LATÊNCIA / CACHE:</span>
+                        <strong className="text-white">{diagnostics.solides.durationMs} ms ({diagnostics.solides.cacheStatus})</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">ADAPTER VERSION:</span>
+                        <strong className="text-orange-300 font-mono">{diagnostics.solides.adapterVersion}</strong>
+                      </div>
+                    </div>
+                    {diagnostics.solides.error && (
+                      <div className="text-[10px] text-rose-400 font-mono bg-rose-950/40 p-1.5 rounded border border-rose-900/50">
+                        Aviso: {diagnostics.solides.error}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Section 2d: PANDAPÉ (pandape.infojobs.com.br) */}
+                {diagnostics.pandape && (
+                  <div className="bg-slate-900/90 border border-slate-800 rounded-md p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-emerald-400 font-bold text-[11px] tracking-wide block uppercase">
+                        PANDAPÉ INFOJOBS (pandape.infojobs.com.br)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-emerald-300 font-bold bg-emerald-950/80 border border-emerald-800 px-1.5 py-0.5 rounded font-mono">
+                          TENANTS: {diagnostics.pandape.tenantsSuccessful}/{diagnostics.pandape.tenantsChecked}
+                        </span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${diagnostics.pandape.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800'}`}>
+                          STATUS: {diagnostics.pandape.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-300">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">VAGAS RETORNADAS:</span>
+                        <strong className="text-emerald-400">{diagnostics.pandape.finalPandapeResults}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">DUPLICADAS REMOVIDAS:</span>
+                        <strong className="text-white">{diagnostics.pandape.duplicatesRemoved}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">LATÊNCIA / CACHE:</span>
+                        <strong className="text-white">{diagnostics.pandape.durationMs} ms ({diagnostics.pandape.cacheStatus})</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">ADAPTER VERSION:</span>
+                        <strong className="text-emerald-300 font-mono">{diagnostics.pandape.adapterVersion}</strong>
+                      </div>
+                    </div>
+                    {diagnostics.pandape.error && (
+                      <div className="text-[10px] text-rose-400 font-mono bg-rose-950/40 p-1.5 rounded border border-rose-900/50">
+                        Aviso: {diagnostics.pandape.error}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Section 2e: REMOTAR (remotar.com.br) */}
                 {diagnostics.remotar && (
                   <div className="bg-slate-900/90 border border-slate-800 rounded-md p-3 space-y-2">
                     <div className="flex items-center justify-between">
@@ -1012,7 +1141,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Section 2c: VAGAS REMOTAS (vagasremotas.com.br / GitHub BR) */}
+                {/* Section 2f: VAGAS REMOTAS (vagasremotas.com.br / GitHub BR) */}
                 {diagnostics.vagasremotas && (
                   <div className="bg-slate-900/90 border border-slate-800 rounded-md p-3 space-y-2">
                     <div className="flex items-center justify-between">
