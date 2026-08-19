@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </h1>
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded flex items-center gap-1">
                   <Cloud className="w-3 h-3 text-emerald-600" />
-                  Fase 2 • Supabase Cloud
+                  Multi-Source Edition • Supabase Cloud
                 </span>
               </div>
               <p id="app-subtitle" className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">

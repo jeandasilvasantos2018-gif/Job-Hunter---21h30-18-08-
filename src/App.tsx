@@ -463,13 +463,13 @@ export default function App() {
                 </div>
                 <div>
                   <h2 className="text-xs font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-                    <span>Busca de Vagas Reais em Tempo Real (Adzuna + Greenhouse)</span>
+                    <span>Busca de Vagas Reais em Tempo Real (Adzuna • Greenhouse • Remotar • Vagas Remotas)</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-black tracking-wider bg-amber-400 text-slate-950 uppercase border border-amber-500 font-mono shadow-2xs">
-                      RUNTIME BUILD: LOCATION-FILTER-V2
+                      RUNTIME BUILD: MULTI-SOURCE-V2
                     </span>
                   </h2>
                   <p className="text-[11px] text-slate-500 font-medium">
-                    Consulte vagas públicas agregadas no Brasil e Job Boards oficiais com filtro de elegibilidade geográfica.
+                    Consulte vagas públicas agregadas no Brasil, curadoria Remotar, repositórios de Vagas Remotas BR e ATS oficiais Greenhouse.
                   </p>
                 </div>
               </div>
